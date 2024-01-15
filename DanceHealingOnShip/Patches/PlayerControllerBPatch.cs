@@ -50,6 +50,10 @@ internal class PlayerControllerBPatch
                 {
                     DanceHealingOnShip.ExecutedInstances[playerUsername] = __instance.timeSincePlayerMoving;
                 }
+                if (__instance.health >= 20)
+                {
+                    __instance.criticallyInjured = false;
+                }
                 /*HUDManager.Instance.DisplayTip("Full health!", "You are now at full health!");*/
                 /*HUDManager.Instance.UpdateHealthUI(__instance.health);*/
                 DanceHealingOnShip.Mls.LogInfo(playerUsername +" has been healed");
