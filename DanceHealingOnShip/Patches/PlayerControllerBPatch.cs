@@ -8,7 +8,6 @@ namespace DanceHealingOnShip.Patches;
 internal class PlayerControllerBPatch
 {
     private const float HealingCooldownTime = 60f;
-
     
     [HarmonyPatch(typeof(PlayerControllerB), nameof(PlayerControllerB.PerformEmote)), HarmonyPostfix]
     private static async void OnDancingOnShip(PlayerControllerB __instance)
@@ -16,7 +15,7 @@ internal class PlayerControllerBPatch
         string playerUsername = __instance.playerUsername;
         
         
-        if (__instance.performingEmote && __instance.health < 95 && __instance.isInHangarShipRoom && 
+        if (__instance.performingEmote && __instance.health < 95 && __instance.isInHangarShipRoom &&
             (!DanceHealingOnShip.ExecutedInstances.ContainsKey(playerUsername) || __instance.timeSincePlayerMoving - DanceHealingOnShip.ExecutedInstances[playerUsername] >= HealingCooldownTime))
         {
             
@@ -35,6 +34,7 @@ internal class PlayerControllerBPatch
             }
             
             
+            
             var cts = new CancellationTokenSource();
             DanceHealingOnShip.TokenSources[playerUsername] = cts;
 
@@ -42,7 +42,7 @@ internal class PlayerControllerBPatch
             {
                 while (__instance.health <= 95 && __instance.performingEmote)
                 {
-                    __instance.health += 5;
+                    __instance.DamagePlayer(-5, false);
                     await Task.Delay(1000, cts.Token);
                 }
 
@@ -71,6 +71,4 @@ internal class PlayerControllerBPatch
         }
     }
     
-
-
 }
