@@ -43,16 +43,6 @@ namespace DanceHealingOnShip
 
         }
         
-        /*
-        [HarmonyPatch(typeof(PlayerControllerB), nameof(PlayerControllerB.Crouch)), HarmonyPostfix]
-        private static void CancelAnimation(PlayerControllerB __instance)
-        {
-
-            __instance.health -= 20;
-            HUDManager.Instance.UpdateHealthUI(__instance.health);
-
-        }
-        */
         
         
     }
