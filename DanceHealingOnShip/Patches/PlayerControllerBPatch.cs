@@ -40,9 +40,10 @@ internal class PlayerControllerBPatch
 
             try
             {
-                while (__instance.health <= 95 && __instance.performingEmote)
+                while (__instance.health <= 90 && __instance.performingEmote)
                 {
-                    __instance.DamagePlayer(-5, false);
+                    __instance.health += 10;
+                    __instance.DamagePlayerServerRpc(-10,__instance.health);
                     await Task.Delay(1000, cts.Token);
                 }
 
