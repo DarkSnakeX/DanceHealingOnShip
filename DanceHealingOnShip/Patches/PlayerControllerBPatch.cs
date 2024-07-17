@@ -19,6 +19,7 @@ internal class PlayerControllerBPatch
             (!DanceHealingOnShip.ExecutedInstances.ContainsKey(playerUsername) || __instance.timeSincePlayerMoving - DanceHealingOnShip.ExecutedInstances[playerUsername] >= HealingCooldownTime))
         {
             
+            
             if (DanceHealingOnShip.TokenSources.ContainsKey(playerUsername))
             {
                 DanceHealingOnShip.TokenSources[playerUsername].Cancel();
@@ -29,7 +30,6 @@ internal class PlayerControllerBPatch
             
             if (!DanceHealingOnShip.HasShownMessage.ContainsKey(playerUsername) || !DanceHealingOnShip.HasShownMessage[playerUsername])
             {
-                /*HUDManager.Instance.DisplayTip("Keep Dancing!", "Keep dancing to recover health!");*/
                 DanceHealingOnShip.HasShownMessage[playerUsername] = true;
             }
             
@@ -43,7 +43,7 @@ internal class PlayerControllerBPatch
                 while (__instance.health <= 90 && __instance.performingEmote)
                 {
                     __instance.health += 10;
-                    __instance.DamagePlayerServerRpc(-10,__instance.health);
+                    __instance.DamagePlayer(-10, false);
                     await Task.Delay(1000, cts.Token);
                 }
 
@@ -55,13 +55,21 @@ internal class PlayerControllerBPatch
                 {
                     __instance.criticallyInjured = false;
                 }
-                /*HUDManager.Instance.DisplayTip("Full health!", "You are now at full health!");*/
-                /*HUDManager.Instance.UpdateHealthUI(__instance.health);*/
+
+                if (__instance == GameNetworkManager.Instance.localPlayerController)
+                {
+                    HUDManager.Instance.DisplayTip("Full health!", "You are now at full health!");
+                    HUDManager.Instance.UpdateHealthUI(__instance.health);
+                }
                 DanceHealingOnShip.Mls.LogInfo(playerUsername +" has been healed");
             }
             catch (TaskCanceledException)
             {
-                /*HUDManager.Instance.UpdateHealthUI(__instance.health);*/
+                if (__instance == GameNetworkManager.Instance.localPlayerController)
+                {
+                    HUDManager.Instance.UpdateHealthUI(__instance.health);
+                }
+
                 DanceHealingOnShip.Mls.LogInfo(playerUsername +" has stopped healing");
                 DanceHealingOnShip.TokenSources.Remove(playerUsername);
             }
@@ -71,5 +79,6 @@ internal class PlayerControllerBPatch
             DanceHealingOnShip.Mls.LogInfo(playerUsername +" is not in the ship or is not injured");
         }
     }
+    
     
 }

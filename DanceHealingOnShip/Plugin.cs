@@ -3,7 +3,6 @@ using System.Threading;
 using BepInEx;
 using BepInEx.Logging;
 using DanceHealingOnShip.Patches;
-using GameNetcodeStuff;
 using HarmonyLib;
 
 namespace DanceHealingOnShip
@@ -42,8 +41,6 @@ namespace DanceHealingOnShip
 
 
         }
-        
-        
         
     }
 }
