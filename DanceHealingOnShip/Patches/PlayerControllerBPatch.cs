@@ -2,83 +2,89 @@ using System.Threading;
 using System.Threading.Tasks;
 using GameNetcodeStuff;
 using HarmonyLib;
+using UnityEngine;
 
 namespace DanceHealingOnShip.Patches;
 
 internal class PlayerControllerBPatch
 {
     private const float HealingCooldownTime = 60f;
-    
-    [HarmonyPatch(typeof(PlayerControllerB), nameof(PlayerControllerB.PerformEmote)), HarmonyPostfix]
-    private static async void OnDancingOnShip(PlayerControllerB __instance)
+
+    [HarmonyPatch(typeof(PlayerControllerB), nameof(PlayerControllerB.StartPerformingEmoteClientRpc)), HarmonyPostfix]
+    // ReSharper disable once InconsistentNaming
+    public static async void OnDancingOnShip(PlayerControllerB __instance)
     {
         string playerUsername = __instance.playerUsername;
         
-        
-        if (__instance.performingEmote && __instance.health < 95 && __instance.isInHangarShipRoom &&
-            (!DanceHealingOnShip.ExecutedInstances.ContainsKey(playerUsername) || __instance.timeSincePlayerMoving - DanceHealingOnShip.ExecutedInstances[playerUsername] >= HealingCooldownTime))
+        bool isCooldownActive = DanceHealingOnShip.ExecutedInstances.TryGetValue(playerUsername, out float lastExecutionTime) &&
+                                Time.time - lastExecutionTime < HealingCooldownTime;
+
+        if (__instance.performingEmote && __instance.health < 100 && __instance.isInHangarShipRoom && !isCooldownActive)
         {
-            
-            
-            if (DanceHealingOnShip.TokenSources.ContainsKey(playerUsername))
+            if (__instance.isPlayerDead)
             {
-                DanceHealingOnShip.TokenSources[playerUsername].Cancel();
-                DanceHealingOnShip.Mls.LogInfo(playerUsername +" removed before healing action");
+                DanceHealingOnShip.Mls.LogInfo(playerUsername + " is dead and cannot heal.");
+                return;
             }
-            
-            
-            
-            if (!DanceHealingOnShip.HasShownMessage.ContainsKey(playerUsername) || !DanceHealingOnShip.HasShownMessage[playerUsername])
+
+            if (DanceHealingOnShip.TokenSources.TryGetValue(playerUsername, out var existingCts))
             {
-                DanceHealingOnShip.HasShownMessage[playerUsername] = true;
+                existingCts.Cancel();
+                DanceHealingOnShip.Mls.LogInfo(playerUsername + " cancelled their previous healing task.");
             }
-            
-            
-            
+
             var cts = new CancellationTokenSource();
             DanceHealingOnShip.TokenSources[playerUsername] = cts;
 
             try
             {
-                while (__instance.health <= 90 && __instance.performingEmote)
+                while (__instance.health < 100 && __instance.performingEmote && !cts.Token.IsCancellationRequested)
                 {
-                    __instance.health += 10;
-                    __instance.DamagePlayer(-10, false);
                     await Task.Delay(1000, cts.Token);
+                    if (!__instance.performingEmote || cts.Token.IsCancellationRequested) break;
+
+                    __instance.health += 10;
+                    if (__instance.health > 100) __instance.health = 100;
+                    
+                    __instance.DamagePlayer(-10, false, true, CauseOfDeath.Unknown, 0, false, Vector3.zero);
+
+                    if (__instance.health >= 20)
+                    {
+                        __instance.criticallyInjured = false;
+                    }
+                    
+                    if (__instance == GameNetworkManager.Instance.localPlayerController)
+                    {
+                        HUDManager.Instance.UpdateHealthUI(__instance.health, false);
+                    }
                 }
 
-                if (__instance.health == 100)
+                if (__instance.health >= 100)
                 {
-                    DanceHealingOnShip.ExecutedInstances[playerUsername] = __instance.timeSincePlayerMoving;
+                    DanceHealingOnShip.ExecutedInstances[playerUsername] = Time.time;
+                    DanceHealingOnShip.Mls.LogInfo(playerUsername + " has been completed healed. Cooldown for 60s.");
+                    if (__instance == GameNetworkManager.Instance.localPlayerController)
+                    {
+                        HUDManager.Instance.DisplayTip("Full health by dancing!", "You are now at full health! Try to avoid damage for 60 seconds to heal again.");
+                    }
                 }
-                if (__instance.health >= 20)
-                {
-                    __instance.criticallyInjured = false;
-                }
-
-                if (__instance == GameNetworkManager.Instance.localPlayerController)
-                {
-                    HUDManager.Instance.DisplayTip("Full health!", "You are now at full health!");
-                    HUDManager.Instance.UpdateHealthUI(__instance.health);
-                }
-                DanceHealingOnShip.Mls.LogInfo(playerUsername +" has been healed");
             }
             catch (TaskCanceledException)
             {
+                DanceHealingOnShip.Mls.LogInfo(playerUsername + " healing was cancelled or is currently on progress.");
+            }
+            finally
+            {
                 if (__instance == GameNetworkManager.Instance.localPlayerController)
                 {
-                    HUDManager.Instance.UpdateHealthUI(__instance.health);
+                    HUDManager.Instance.UpdateHealthUI(__instance.health, false);
                 }
-
-                DanceHealingOnShip.Mls.LogInfo(playerUsername +" has stopped healing");
                 DanceHealingOnShip.TokenSources.Remove(playerUsername);
             }
         }
         else
         {
-            DanceHealingOnShip.Mls.LogInfo(playerUsername +" is not in the ship or is not injured");
+            DanceHealingOnShip.Mls.LogInfo(playerUsername + " is either not dancing, at full health, on cooldown, or not in the hangar room.");
         }
     }
-    
-    
 }

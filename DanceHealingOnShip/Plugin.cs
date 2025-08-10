@@ -29,7 +29,6 @@ namespace DanceHealingOnShip
             }
 
             Mls = BepInEx.Logging.Logger.CreateLogSource(PluginInfo.PLUGIN_GUID);
-            Mls.LogInfo("DanceHealingOnShip is loaded - version " + PluginInfo.PLUGIN_VERSION);
             
             _harmony.PatchAll(typeof(DanceHealingOnShip));
             _harmony.PatchAll(typeof(PlayerControllerBPatch));
@@ -38,6 +37,9 @@ namespace DanceHealingOnShip
             ExecutedInstances = new Dictionary<string, float>();
             HasShownMessage = new Dictionary<string, bool>();
             TokenSources = new Dictionary<string, CancellationTokenSource>();
+            
+            // Better to have it here lmao
+            Mls.LogInfo("DanceHealingOnShip is loaded - version " + PluginInfo.PLUGIN_VERSION);
 
 
         }
